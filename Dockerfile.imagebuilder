@@ -22,16 +22,14 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 # 定义变量（方便后续修改）
-ENV IB_VERSION=24.10.0
-ENV TARGET=armsr
-ENV SUBTARGET=armv7
-ENV IB_DIR=/builder
-WORKDIR $IB_DIR
+ARG IB_VERSION=24.10.0
+ARG TARGET=armsr
+ARG SUBTARGET=armv7
 
-# 下载官方稳定版 ImageBuilder（从 release 目录）
-RUN wget https://downloads.immortalwrt.org/releases/${IB_VERSION}/targets/${TARGET}/${SUBTARGET}/immortalwrt-imagebuilder-${TARGET}-${SUBTARGET}.Linux-x86_64.tar.xz -O imagebuilder.tar.xz && \
-    tar -xf imagebuilder.tar.xz --strip-components=1 && \
-    rm imagebuilder.tar.xz
+RUN wget https://downloads.immortalwrt.org/releases/${IB_VERSION}/targets/${TARGET}/${SUBTARGET}/immortalwrt-imagebuilder-${IB_VERSION}-${TARGET}-${SUBTARGET}.Linux-x86_64.tar.zst -O imagebuilder.tar.zst && \
+    tar -xf imagebuilder.tar.zst --strip-components=1 && \
+    rm imagebuilder.tar.zst
+
 
 # 默认进入 imagebuilder 环境
 WORKDIR $IB_DIR
