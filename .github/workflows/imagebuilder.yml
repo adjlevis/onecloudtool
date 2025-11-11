@@ -1,0 +1,46 @@
+name: Build Custom ImageBuilder
+
+on:
+  schedule:
+    - cron: '0 3 * * *'   # 每天凌晨3点自动检测更新
+  workflow_dispatch:       # 允许手动触发
+  push:
+    paths:
+      - 'Dockerfile.imagebuilder'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set version info
+        run: |
+          # 自动抓取最新 release 号（例：24.10.0）
+          curl -s https://downloads.immortalwrt.org/releases/ \
+            | grep -Eo '24\.[0-9]+\.[0-9]+' | sort -V | tail -n1 > IB_VERSION
+          cat IB_VERSION
+
+      - name: Build Docker image
+        run: |
+          IB_VERSION=$(cat IB_VERSION)
+          docker build \
+            -f Dockerfile.imagebuilder \
+            --build-arg IB_VERSION=$IB_VERSION \
+            -t ghcr.io/${{ github.actor }}/immortalwrt-imagebuilder:armsr-armv7-${IB_VERSION} .
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push to GHCR
+        run: |
+          IB_VERSION=$(cat IB_VERSION)
+          docker push ghcr.io/${{ github.actor }}/immortalwrt-imagebuilder:armsr-armv7-${IB_VERSION}
+          docker tag ghcr.io/${{ github.actor }}/immortalwrt-imagebuilder:armsr-armv7-${IB_VERSION} \
+                     ghcr.io/${{ github.actor }}/immortalwrt-imagebuilder:armsr-armv7-latest
+          docker push ghcr.io/${{ github.actor }}/immortalwrt-imagebuilder:armsr-armv7-latest
