@@ -1,0 +1,38 @@
+# syntax=docker/dockerfile:1
+
+FROM debian:bookworm-slim
+
+LABEL maintainer="yourname <you@example.com>"
+LABEL description="Custom ImmortalWrt ImageBuilder for armsr/armv7 24.10 stable"
+
+# 基础依赖
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    ca-certificates \
+    wget \
+    build-essential \
+    libncurses5-dev \
+    gawk \
+    unzip \
+    file \
+    rsync \
+    git \
+    python3 \
+    qemu-user-static \
+    && rm -rf /var/lib/apt/lists/*
+
+# 定义变量（方便后续修改）
+ENV IB_VERSION=24.10.0
+ENV TARGET=armsr
+ENV SUBTARGET=armv7
+ENV IB_DIR=/builder
+WORKDIR $IB_DIR
+
+# 下载官方稳定版 ImageBuilder（从 release 目录）
+RUN wget https://downloads.immortalwrt.org/releases/${IB_VERSION}/targets/${TARGET}/${SUBTARGET}/immortalwrt-imagebuilder-${TARGET}-${SUBTARGET}.Linux-x86_64.tar.xz -O imagebuilder.tar.xz && \
+    tar -xf imagebuilder.tar.xz --strip-components=1 && \
+    rm imagebuilder.tar.xz
+
+# 默认进入 imagebuilder 环境
+WORKDIR $IB_DIR
+ENTRYPOINT ["/bin/bash"]
