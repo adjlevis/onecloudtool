@@ -1,36 +1,62 @@
-# syntax=docker/dockerfile:1
+# ============================================================
+# OneCloud ImmortalWrt ImageBuilder 基础镜像构建文件
+# 说明：
+# - 基于官方稳定版 24.10
+# - 支持 armsr/armv7 平台（OneCloud）
+# - 自动下载并解压 ImageBuilder
+# ============================================================
 
-FROM debian:bookworm-slim
+# 使用 Ubuntu 最新版基础镜像
+FROM ubuntu:22.04
 
-LABEL maintainer="yourname <you@example.com>"
-LABEL description="Custom ImmortalWrt ImageBuilder for armsr/armv7 24.10 stable"
+LABEL maintainer="adjlevis <github.com/adjlevis>"
+LABEL description="ImmortalWrt 24.10 stable ImageBuilder for OneCloud armv7"
 
-# 基础依赖
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ca-certificates \
-    wget \
-    build-essential \
-    libncurses5-dev \
-    gawk \
-    unzip \
-    file \
-    rsync \
-    git \
-    python3 \
-    qemu-user-static \
-    && rm -rf /var/lib/apt/lists/*
-
-# 定义变量（方便后续修改）
-ARG IB_VERSION=24.10.0
+# ============================================================
+# 设置环境变量
+# ============================================================
+ARG IB_VERSION=24.10
 ARG TARGET=armsr
 ARG SUBTARGET=armv7
+ENV DEBIAN_FRONTEND=noninteractive
 
+# ============================================================
+# 安装依赖工具
+# ============================================================
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        ca-certificates wget xz-utils zstd \
+        build-essential bash git unzip file \
+        python3 python3-distutils gawk rsync sudo && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# ============================================================
+# 创建工作目录
+# ============================================================
+WORKDIR /home/build/immortalwrt
+
+# ============================================================
+# 下载并解压官方稳定版 ImageBuilder
+# ImmortalWrt 官方下载地址：
+#   https://downloads.immortalwrt.org/releases/24.10/targets/armsr/armv7/
+# ============================================================
 RUN wget https://downloads.immortalwrt.org/releases/${IB_VERSION}/targets/${TARGET}/${SUBTARGET}/immortalwrt-imagebuilder-${IB_VERSION}-${TARGET}-${SUBTARGET}.Linux-x86_64.tar.zst -O imagebuilder.tar.zst && \
-    tar -xf imagebuilder.tar.zst --strip-components=1 && \
-    rm imagebuilder.tar.zst
+    unzstd imagebuilder.tar.zst -o imagebuilder.tar && \
+    tar -xf imagebuilder.tar --strip-components=1 && \
+    rm -f imagebuilder.tar.zst imagebuilder.tar
 
+# ============================================================
+# 默认用户与权限
+# ============================================================
+RUN useradd -m build && \
+    mkdir -p /home/build/immortalwrt/bin /home/build/immortalwrt/files && \
+    chown -R build:build /home/build
 
-# 默认进入 imagebuilder 环境
-WORKDIR $IB_DIR
+USER build
+WORKDIR /home/build/immortalwrt
+
+# ============================================================
+# 默认入口命令（可以在 CI 中覆盖）
+# ============================================================
 ENTRYPOINT ["/bin/bash"]
